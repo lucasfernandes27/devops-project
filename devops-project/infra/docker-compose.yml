@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ../backend
+    env_file:
+      - ../backend/.env.example
+    environment:
+      PG_HOST: postgres
+      PG_PASSWORD: postgres
+    depends_on:
+      - postgres
+    ports:
+      - '4000:4000'
+    networks:
+      - devnet
+
+  frontend:
+    build: ../frontend
+    ports:
+      - '3000:80'
+    depends_on:
+      - backend
+    networks:
+      - devnet
+
+  cadvisor:
+    image: google/cadvisor:latest
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    ports:
+      - '8080:8080'
+    networks:
+      - devnet
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    ports:
+      - '9090:9090'
+    networks:
+      - devnet
+
+  grafana:
+    image: grafana/grafana:9.5.0
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - '3001:3000'
+    depends_on:
+      - prometheus
+    networks:
+      - devnet
+
+volumes:
+  pgdata:
+
+networks:
+  devnet:
+    driver: bridge
